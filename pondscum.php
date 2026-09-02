@@ -104,7 +104,8 @@ function processFile($file, $dir='blo') {
 		$lily['file'] = $file;
 		$lily['path'] = $path;
 		$lily['source'] = preg_replace('/\%%?(Generated )?layout.*/si', '', $score);
-		$lily['roadmap'] = preg_match('/^roadmap\s*=\s*{/m', $lily['source']) === 1;
+		$lily['roadmap'] = musicVariableExists($lily['source'], 'roadmap');
+		$lily['lyreRoadmap'] = musicVariableExists($lily['source'], 'lyreRoadmap');
 		$lily['changes'] = array_search('changes', $lily['parts']) ? 1 : 0;
 		$lily['words'] = array_search('words', $lily['parts']);
 		$lily['outputoptions'] = array(
@@ -209,6 +210,7 @@ function buildLayout($lily) {
 		$staffspacing = "";
 		if ($page == 'lyre') {
 			$layout .= "\n#(set-global-staff-size 15)\n";
+			$layout .= "\\paper { page-breaking = #ly:one-page-breaking }\n";
 			$staffspacing = "\\override Staff.VerticalAxisGroup.minimum-Y-extent = #'(-1 . 1)";
 			$changes = "";
 		} #else {
@@ -240,9 +242,14 @@ function buildLayout($lily) {
 					$instrument = " instrumentName = \" " . ucwords($label,) . "\" ";
 				}
 
-				$partReference = "\\" . $subPart['name'];
+				$partName = $subPart['name'];
+				if ($page == 'lyre' && musicVariableExists($lily['source'], $partName . 'Lyre')) {
+					$partName .= 'Lyre';
+				}
+				$partReference = "\\" . $partName;
 				if ($lily['roadmap'] && !$roadmapAdded) {
-					$partReference = "<< \\roadmap { $partReference } >>";
+					$roadmapName = $page == 'lyre' && $lily['lyreRoadmap'] ? 'lyreRoadmap' : 'roadmap';
+					$partReference = "<< \\$roadmapName { $partReference } >>";
 					$roadmapAdded = true;
 				}
 
@@ -275,6 +282,12 @@ function buildLayout($lily) {
 	}
 	$lily['filename'] = $lily['title'] . "$keyname-" . ucwords($part);
 	return $lily;
+}
+
+function musicVariableExists(string $source, string $name): bool
+{
+	$name = preg_quote($name, '/');
+	return preg_match('/^' . $name . '\s*=\s*(?:\\\\[A-Za-z]+\s*)?{/m', $source) === 1;
 }
 
 function getOctave($key, $part, $clef, $octave) {
