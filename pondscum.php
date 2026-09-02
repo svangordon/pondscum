@@ -104,6 +104,7 @@ function processFile($file, $dir='blo') {
 		$lily['file'] = $file;
 		$lily['path'] = $path;
 		$lily['source'] = preg_replace('/\%%?(Generated )?layout.*/si', '', $score);
+		$lily['roadmap'] = preg_match('/^roadmap\s*=\s*{/m', $lily['source']) === 1;
 		$lily['changes'] = array_search('changes', $lily['parts']) ? 1 : 0;
 		$lily['words'] = array_search('words', $lily['parts']);
 		$lily['outputoptions'] = array(
@@ -151,6 +152,7 @@ function buildLayout($lily) {
 			";
 		if ($part != 'midi') { $layout .= $changes; }
 		// Process all parts with the unified structure
+		$roadmapAdded = false;
 		foreach ($parts as $groupName => $subParts) {
 			// Skip special parts
 			if ($groupName == 'changes' || $groupName == 'words') {
@@ -181,7 +183,13 @@ function buildLayout($lily) {
 					$layout .= " \\set Staff.midiInstrument = #\"$instrument\" \\clef $clef";
 				}
 
-				$layout .= "$tempoMark\n\t\t\t\\override Score.RehearsalMark.self-alignment-X = #LEFT\n\t\t\t\\$partName\n\t\t}";
+				$partReference = "\\$partName";
+				if ($lily['roadmap'] && !$roadmapAdded) {
+					$partReference = "<< \\roadmap { $partReference } >>";
+					$roadmapAdded = true;
+				}
+
+				$layout .= "$tempoMark\n\t\t\t\\override Score.RehearsalMark.self-alignment-X = #LEFT\n\t\t\t$partReference\n\t\t}";
 			}
 		}
 
@@ -224,11 +232,18 @@ function buildLayout($lily) {
 						$changes
 						\\set Score.rehearsalMarkFormatter = #format-mark-box-numbers";
 			$isDrumPart = $part == 'bassDrum';
+			$roadmapAdded = false;
 			foreach ($subParts as $subPart) {
 				$label = $subPart['label'];
 				$instrument = "";
 				if (!empty($label)) {
 					$instrument = " instrumentName = \" " . ucwords($label,) . "\" ";
+				}
+
+				$partReference = "\\" . $subPart['name'];
+				if ($lily['roadmap'] && !$roadmapAdded) {
+					$partReference = "<< \\roadmap { $partReference } >>";
+					$roadmapAdded = true;
 				}
 
 				$layout .= "\n	
@@ -238,7 +253,7 @@ function buildLayout($lily) {
 							$staffspacing
 							" . ($isDrumPart ? '' : "\\clef $clef
 						$naturalize \\transpose " . $keys[$key] . " c" . $octave . "
-						") . "\\" . $subPart['name'] . "
+						") . $partReference . "
 
 						}
 						";
