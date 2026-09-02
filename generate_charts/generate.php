@@ -148,6 +148,8 @@ function processLily(array $lily)
 			}
 		}
 
+		// Keep macOS metadata out of generated artifacts and their ZIP files.
+		removeFilesNamed($dir, '.DS_Store');
 		print "$title.zip\n";
 		chdir("$musicdir");
 		system("zip -qr \"$title/$title\".zip	\"$title\"");
@@ -183,10 +185,38 @@ function generateFile(array $lily, string $title, string $part)
 
 function rrmdir(string $path)
 {
-	return is_file($path)?
-		@unlink($path):
-		array_map('rrmdir',glob($path.'/*'))==@rmdir($path)
-	;
+	if (is_file($path) || is_link($path)) {
+		return @unlink($path);
+	}
+	if (!is_dir($path)) {
+		return true;
+	}
+	foreach (scandir($path) as $entry) {
+		if ($entry === '.' || $entry === '..') {
+			continue;
+		}
+		rrmdir($path . DIRECTORY_SEPARATOR . $entry);
+	}
+	return @rmdir($path);
+}
+
+/** Remove files with an exact name from a directory tree. */
+function removeFilesNamed(string $path, string $name): void
+{
+	if (!is_dir($path)) {
+		return;
+	}
+	foreach (scandir($path) as $entry) {
+		if ($entry === '.' || $entry === '..') {
+			continue;
+		}
+		$child = $path . DIRECTORY_SEPARATOR . $entry;
+		if ($entry === $name && is_file($child)) {
+			@unlink($child);
+		} elseif (is_dir($child) && !is_link($child)) {
+			removeFilesNamed($child, $name);
+		}
+	}
 }
 
 ?>
