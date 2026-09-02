@@ -238,7 +238,7 @@ function buildLayout($lily) {
 							$staffspacing
 							" . ($isDrumPart ? '' : "\\clef $clef
 						$naturalize \\transpose " . $keys[$key] . " c" . $octave . "
-						") . "\\\\" . $subPart['name'] . "
+						") . "\\" . $subPart['name'] . "
 
 						}
 						";
