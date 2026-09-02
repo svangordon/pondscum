@@ -4,7 +4,7 @@ $keys = array('Eb'=>'ees', 'Bb'=>'bes', 'C'=>'c', 'F'=>'f');
 $clefs = array('treble', 'bass', 'alto', 'tenor');
 $layouts = array('letter'=>'"letter"', 'lyre'=>'"b6" \'landscape');
 $octaves = array('+2'=> "''", '+1'=>"'", '0'=>'', "-1"=>',','-2'=>',,');
-$instruments = array('bass'=>'tuba', 'melody'=>'trumpet', 'tenor'=>'trombone', 'pahs'=>'trombone', 'riffTwo'=>'clarinet', 'harmony'=>'clarinet', 'chordLo'=>'trombone', 'chordMid'=>'baritone sax', 'bari'=>'baritone sax', 'countermelody'=>'alto sax');
+$instruments = array('bass'=>'tuba', 'melody'=>'trumpet', 'tenor'=>'trombone', 'bassDrum'=>'drums', 'pahs'=>'trombone', 'riffTwo'=>'clarinet', 'harmony'=>'clarinet', 'chordLo'=>'trombone', 'chordMid'=>'baritone sax', 'bari'=>'baritone sax', 'countermelody'=>'alto sax');
 
 function createOutput($lily) {
 	$part = $lily['outputoptions']['part'];
@@ -162,7 +162,8 @@ function buildLayout($lily) {
 				$partName = $subPart['name'];
 				$label = $subPart['label'];
 				$instrument = isset($instruments[$groupName]) ? $instruments[$groupName] : 'alto sax';
-				$clef = $groupName == 'bass' ? 'bass' : 'treble';
+				$isDrumPart = $groupName == 'bassDrum';
+				$clef = $groupName == 'bass' ? 'bass' : ($isDrumPart ? 'percussion' : 'treble');
 
 				$layout .= "\n\t\t";
 				if ($part == 'midi') {
@@ -175,7 +176,10 @@ function buildLayout($lily) {
 					$displayName .= " (" . ucwords($label,) . ")";
 				}
 
-				$layout .= "\\new Staff \\with { \\consists \"Volta_engraver\" instrumentName = \"$displayName\" } {  \\set Staff.midiInstrument = #\"$instrument\" \\clef $clef";
+				$layout .= "\\new " . ($isDrumPart ? 'DrumStaff' : 'Staff') . " \\with { \\consists \"Volta_engraver\" instrumentName = \"$displayName\" } {";
+				if (!$isDrumPart) {
+					$layout .= " \\set Staff.midiInstrument = #\"$instrument\" \\clef $clef";
+				}
 
 				$layout .= "$tempoMark\n\t\t\t\\override Score.RehearsalMark.self-alignment-X = #LEFT\n\t\t\t\\$partName\n\t\t}";
 			}
@@ -219,6 +223,7 @@ function buildLayout($lily) {
 					\\score { <<
 						$changes
 						\\set Score.rehearsalMarkFormatter = #format-mark-box-numbers";
+			$isDrumPart = $part == 'bassDrum';
 			foreach ($subParts as $subPart) {
 				$label = $subPart['label'];
 				$instrument = "";
@@ -227,13 +232,13 @@ function buildLayout($lily) {
 				}
 
 				$layout .= "\n	
-						\\new Staff \\with { \\consists \"Volta_engraver\" $instrument } {
+					\\new " . ($isDrumPart ? 'DrumStaff' : 'Staff') . " \\with { \\consists \"Volta_engraver\" $instrument } {
 						$tempoMark
 						\\override Score.RehearsalMark.self-alignment-X = #LEFT
 							$staffspacing
-							\\clef $clef
+							" . ($isDrumPart ? '' : "\\clef $clef
 						$naturalize \\transpose " . $keys[$key] . " c" . $octave . "
-						\\" . $subPart['name'] . "
+						") . "\\\\" . $subPart['name'] . "
 
 						}
 						";
