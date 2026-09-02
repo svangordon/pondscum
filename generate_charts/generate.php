@@ -112,6 +112,17 @@ function processLily(array $lily)
 					$lily['file'] = str_replace('.ly', '', $lily['file']) . "_" . getmypid() . ".ly";
 					generateFile($lily, $title, $part);
 				});
+			} else if ($part == 'bassDrum') {
+				mkdir("$dir/$part");
+				$lily['outputoptions']['key'] = 'C';
+				$lily['outputoptions']['clef'] = 'percussion';
+				$lily['outputoptions']['page'] = 'letter';
+				$lily['outputoptions']['octave'] = 0;
+				launch_job($pids, function () use ($lily, $title, $part) {
+					$lily['file'] = str_replace('.ly', '', $lily['file']) . "_" . getmypid() . ".ly";
+					$filename = generateFile($lily, $title, $part);
+					print "\t$filename\n";
+				});
 			} else {
 				mkdir("$dir/$part");
 				foreach (array_keys($keys) as $key) {
