@@ -112,7 +112,7 @@ function processLily(array $lily)
 					$lily['file'] = str_replace('.ly', '', $lily['file']) . "_" . getmypid() . ".ly";
 					generateFile($lily, $title, $part);
 				});
-			} else if ($part == 'bassDrum') {
+			} else if (isPercussionPart($part)) {
 				mkdir("$dir/$part");
 				$lily['outputoptions']['key'] = 'C';
 				$lily['outputoptions']['clef'] = 'percussion';

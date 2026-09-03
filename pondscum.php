@@ -4,7 +4,8 @@ $keys = array('Eb'=>'ees', 'Bb'=>'bes', 'C'=>'c', 'F'=>'f');
 $clefs = array('treble', 'bass', 'alto', 'tenor');
 $layouts = array('letter'=>'"letter"', 'lyre'=>'"b6" \'landscape');
 $octaves = array('+2'=> "''", '+1'=>"'", '0'=>'', "-1"=>',','-2'=>',,');
-$instruments = array('bass'=>'tuba', 'melody'=>'trumpet', 'tenor'=>'trombone', 'bassDrum'=>'drums', 'pahs'=>'trombone', 'riffTwo'=>'clarinet', 'harmony'=>'clarinet', 'chordLo'=>'trombone', 'chordMid'=>'baritone sax', 'bari'=>'baritone sax', 'countermelody'=>'alto sax');
+$percussionParts = array('bassDrum', 'snareDrum', 'cowbell');
+$instruments = array('bass'=>'tuba', 'melody'=>'trumpet', 'tenor'=>'trombone', 'bassDrum'=>'drums', 'snareDrum'=>'drums', 'cowbell'=>'drums', 'pahs'=>'trombone', 'riffTwo'=>'clarinet', 'harmony'=>'clarinet', 'chordLo'=>'trombone', 'chordMid'=>'baritone sax', 'bari'=>'baritone sax', 'countermelody'=>'alto sax');
 
 function createOutput($lily) {
 	$part = $lily['outputoptions']['part'];
@@ -173,8 +174,8 @@ function buildLayout($lily) {
 				$partName = $subPart['name'];
 				$label = $subPart['label'];
 				$instrument = isset($instruments[$groupName]) ? $instruments[$groupName] : 'alto sax';
-				$isDrumPart = $groupName == 'bassDrum';
-				$clef = $groupName == 'bass' ? 'bass' : ($isDrumPart ? 'percussion' : 'treble');
+				$isPercussionPart = isPercussionPart($groupName);
+				$clef = $groupName == 'bass' ? 'bass' : ($isPercussionPart ? 'percussion' : 'treble');
 
 				$layout .= "\n\t\t";
 				if ($part == 'midi') {
@@ -187,8 +188,8 @@ function buildLayout($lily) {
 					$displayName .= " (" . ucwords($label,) . ")";
 				}
 
-				$layout .= "\\new " . ($isDrumPart ? 'DrumStaff' : 'Staff') . " \\with { \\consists \"Volta_engraver\" instrumentName = \"$displayName\" } {";
-				if (!$isDrumPart) {
+				$layout .= "\\new " . ($isPercussionPart ? 'DrumStaff' : 'Staff') . " \\with { \\consists \"Volta_engraver\" instrumentName = \"$displayName\" } {";
+				if (!$isPercussionPart) {
 					$layout .= " \\set Staff.midiInstrument = #\"$instrument\" \\clef $clef";
 				}
 
@@ -241,7 +242,7 @@ function buildLayout($lily) {
 					\\score { <<
 						$changes
 						\\set Score.rehearsalMarkFormatter = #format-mark-box-numbers";
-			$isDrumPart = $part == 'bassDrum';
+			$isPercussionPart = isPercussionPart($part);
 			$roadmapAdded = false;
 			foreach ($subParts as $subPart) {
 				$label = $subPart['label'];
@@ -262,11 +263,11 @@ function buildLayout($lily) {
 				}
 
 				$layout .= "\n	
-					\\new " . ($isDrumPart ? 'DrumStaff' : 'Staff') . " \\with { \\consists \"Volta_engraver\" $instrument } {
+					\\new " . ($isPercussionPart ? 'DrumStaff' : 'Staff') . " \\with { \\consists \"Volta_engraver\" $instrument } {
 						$tempoMark
 						\\override Score.RehearsalMark.self-alignment-X = #LEFT
 							$staffspacing
-							" . ($isDrumPart ? '' : "\\clef $clef
+							" . ($isPercussionPart ? '' : "\\clef $clef
 						$naturalize \\transpose " . $keys[$key] . " c" . $octave . "
 						") . $partReference . "
 
@@ -296,6 +297,12 @@ function musicVariableExists(string $source, string $name): bool
 {
 	$name = preg_quote($name, '/');
 	return preg_match('/^' . $name . '\s*=\s*(?:\\\\[A-Za-z]+\s*)?{/m', $source) === 1;
+}
+
+function isPercussionPart(string $part): bool
+{
+	global $percussionParts;
+	return in_array($part, $percussionParts, true);
 }
 
 function copySourceIncludes(array $lily, string $destinationDirectory): void
