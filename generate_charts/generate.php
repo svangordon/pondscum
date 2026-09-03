@@ -189,6 +189,9 @@ function generateFile(array $lily, string $title, string $part)
 	$filename = $dir . DIRECTORY_SEPARATOR . $title . "." . $ext;
 	$output = createOutput($lily);
 	file_put_contents($filename, $output);
+	if ($part == 'source') {
+		copySourceIncludes($lily, $dir);
+	}
 	return $filename;
 }
 
