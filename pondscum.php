@@ -10,6 +10,9 @@ function createOutput($lily) {
 	$part = $lily['outputoptions']['part'];
 	$contents = $lily['source'].$lily['layout'];
 	$filename = $lily['file'];
+	$includeOption = isset($lily['sourceDirectory'])
+		? ' -I ' . escapeshellarg($lily['sourceDirectory'])
+		: '';
 	$output = "";
 	if ($part == 'source') {
 		$output =  "$contents";
@@ -18,7 +21,11 @@ function createOutput($lily) {
 		$out = fopen("/tmp/$filename", 'w');
 		fwrite($out,$contents);
 		fclose($out);
-		exec("lilypond -o '/tmp/$filename' '/tmp/$filename' 2>&1", $error);
+		$temporaryFile = "/tmp/$filename";
+		$command = 'lilypond' . $includeOption
+			. ' -o ' . escapeshellarg($temporaryFile)
+			. ' ' . escapeshellarg($temporaryFile) . ' 2>&1';
+		exec($command, $error);
 		if (isset($lily['outputoptions']['debug'])) {
 			$output = "<pre>$contents<hr>".implode('<br>', $error)."<hr>".print_r($output, 1);
 		} else {
@@ -103,6 +110,7 @@ function processFile($file, $dir='blo') {
 		$lily['tempo'] = isset($tempo[1]) ? $tempo[1] : ' 4 = 100';
 		$lily['file'] = $file;
 		$lily['path'] = $path;
+		$lily['sourceDirectory'] = dirname(realpath($filename));
 		$lily['source'] = preg_replace('/\%%?(Generated )?layout.*/si', '', $score);
 		$lily['roadmap'] = musicVariableExists($lily['source'], 'roadmap');
 		$lily['lyreRoadmap'] = musicVariableExists($lily['source'], 'lyreRoadmap');
@@ -288,6 +296,41 @@ function musicVariableExists(string $source, string $name): bool
 {
 	$name = preg_quote($name, '/');
 	return preg_match('/^' . $name . '\s*=\s*(?:\\\\[A-Za-z]+\s*)?{/m', $source) === 1;
+}
+
+function copySourceIncludes(array $lily, string $destinationDirectory): void
+{
+	if (!isset($lily['sourceDirectory'])) {
+		return;
+	}
+
+	preg_match_all('/\\\\include\s+"([^"]+)"/', $lily['source'], $matches);
+	$sourceDirectory = realpath($lily['sourceDirectory']);
+	if ($sourceDirectory === false) {
+		return;
+	}
+
+	foreach ($matches[1] as $includePath) {
+		$normalizedIncludePath = str_replace('\\', '/', $includePath);
+		if (substr($normalizedIncludePath, 0, 1) === '/'
+			|| in_array('..', explode('/', $normalizedIncludePath), true)) {
+			continue;
+		}
+
+		$sourcePath = realpath($sourceDirectory . DIRECTORY_SEPARATOR . $includePath);
+		if ($sourcePath === false
+			|| !is_file($sourcePath)
+			|| strpos($sourcePath, $sourceDirectory . DIRECTORY_SEPARATOR) !== 0) {
+			continue;
+		}
+
+		$destinationPath = $destinationDirectory . DIRECTORY_SEPARATOR . $includePath;
+		$includeDirectory = dirname($destinationPath);
+		if (!is_dir($includeDirectory)) {
+			mkdir($includeDirectory, 0777, true);
+		}
+		copy($sourcePath, $destinationPath);
+	}
 }
 
 function getOctave($key, $part, $clef, $octave) {
