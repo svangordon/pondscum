@@ -113,8 +113,8 @@ function processFile($file, $dir='blo') {
 		$lily['path'] = $path;
 		$lily['sourceDirectory'] = dirname(realpath($filename));
 		$lily['source'] = preg_replace('/\%%?(Generated )?layout.*/si', '', $score);
-		$lily['roadmap'] = musicVariableExists($lily['source'], 'roadmap');
-		$lily['lyreRoadmap'] = musicVariableExists($lily['source'], 'lyreRoadmap');
+		$lily['form'] = musicVariableExists($lily['source'], 'form');
+		$lily['lyreForm'] = musicVariableExists($lily['source'], 'lyreForm');
 		$lily['changes'] = array_search('changes', $lily['parts']) ? 1 : 0;
 		$lily['words'] = array_search('words', $lily['parts']);
 		$lily['outputoptions'] = array(
@@ -162,7 +162,7 @@ function buildLayout($lily) {
 			";
 		if ($part != 'midi') { $layout .= $changes; }
 		// Process all parts with the unified structure
-		$roadmapAdded = false;
+		$formAdded = false;
 		foreach ($parts as $groupName => $subParts) {
 			// Skip special parts
 			if ($groupName == 'changes' || $groupName == 'words') {
@@ -194,9 +194,9 @@ function buildLayout($lily) {
 				}
 
 				$partReference = "\\$partName";
-				if ($lily['roadmap'] && !$roadmapAdded) {
-					$partReference = "<< \\roadmap { $partReference } >>";
-					$roadmapAdded = true;
+				if ($lily['form'] && !$formAdded) {
+					$partReference = "<< \\form { $partReference } >>";
+					$formAdded = true;
 				}
 
 				$layout .= "$tempoMark\n\t\t\t\\override Score.RehearsalMark.self-alignment-X = #LEFT\n\t\t\t$partReference\n\t\t}";
@@ -243,7 +243,7 @@ function buildLayout($lily) {
 						$changes
 						\\set Score.rehearsalMarkFormatter = #format-mark-box-numbers";
 			$isPercussionPart = isPercussionPart($part);
-			$roadmapAdded = false;
+			$formAdded = false;
 			foreach ($subParts as $subPart) {
 				$label = $subPart['label'];
 				$instrument = "";
@@ -256,10 +256,10 @@ function buildLayout($lily) {
 					$partName .= 'Lyre';
 				}
 				$partReference = "\\" . $partName;
-				if ($lily['roadmap'] && !$roadmapAdded) {
-					$roadmapName = $page == 'lyre' && $lily['lyreRoadmap'] ? 'lyreRoadmap' : 'roadmap';
-					$partReference = "<< \\$roadmapName { $partReference } >>";
-					$roadmapAdded = true;
+				if ($lily['form'] && !$formAdded) {
+					$formName = $page == 'lyre' && $lily['lyreForm'] ? 'lyreForm' : 'form';
+					$partReference = "<< \\$formName { $partReference } >>";
+					$formAdded = true;
 				}
 
 				$layout .= "\n	
