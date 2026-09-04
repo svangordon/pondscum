@@ -3,3 +3,5 @@ generate_charts/output
 output.bak/
 temp/
 .svn/
+
+.DS_Store
